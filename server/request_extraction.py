@@ -14,6 +14,7 @@ from fastapi.responses import StreamingResponse
 from manga_translator import Config
 from server.myqueue import task_queue, wait_in_queue, QueueElement, BatchQueueElement
 from server.streaming import notify, stream
+from server.config_loader import merge_with_default
 
 class TranslateRequest(BaseModel):
     """This request can be a multipart or a json request"""
@@ -52,16 +53,22 @@ async def to_pil_image(image: Union[str, bytes]) -> Image.Image:
 
 async def get_ctx(req: Request, config: Config, image: str|bytes):
     image = await to_pil_image(image)
+    
+    # Merge with default config
+    merged_config = merge_with_default(config)
 
-    task = QueueElement(req, image, config, 0)
+    task = QueueElement(req, image, merged_config, 0)
     task_queue.add_task(task)
 
     return await wait_in_queue(task, None)
 
 async def while_streaming(req: Request, transform, config: Config, image: bytes | str):
     image = await to_pil_image(image)
+    
+    # Merge with default config
+    merged_config = merge_with_default(config)
 
-    task = QueueElement(req, image, config, 0)
+    task = QueueElement(req, image, merged_config, 0)
     task_queue.add_task(task)
 
     messages = asyncio.Queue()
@@ -74,6 +81,9 @@ async def while_streaming(req: Request, transform, config: Config, image: bytes 
 
 async def get_batch_ctx(req: Request, config: Config, images: list[str|bytes], batch_size: int = 4):
     """Process batch translation request"""
+    # Merge with default config
+    merged_config = merge_with_default(config)
+    
     # Convert images to PIL Image objects
     pil_images = []
     for img in images:
@@ -81,7 +91,7 @@ async def get_batch_ctx(req: Request, config: Config, images: list[str|bytes], b
         pil_images.append(pil_img)
     
     # Create batch task
-    batch_task = BatchQueueElement(req, pil_images, config, batch_size)
+    batch_task = BatchQueueElement(req, pil_images, merged_config, batch_size)
     task_queue.add_task(batch_task)
     
     return await wait_in_queue(batch_task, None)

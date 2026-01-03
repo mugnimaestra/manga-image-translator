@@ -22,6 +22,7 @@ from server.instance import ExecutorInstance, executor_instances
 from server.myqueue import task_queue
 from server.request_extraction import get_ctx, while_streaming, TranslateRequest, BatchTranslateRequest, get_batch_ctx
 from server.to_json import to_translation, TranslationResponse
+from server.config_loader import load_default_config
 
 app = FastAPI()
 nonce = None
@@ -162,6 +163,15 @@ async def stream_image_form_web(req: Request, image: UploadFile = File(...), con
 async def queue_size() -> int:
     return len(task_queue.queue)
 
+@app.get("/default-config", tags=["api", "config"])
+async def get_default_config_endpoint():
+    """Returns the current default configuration loaded from --default-config file."""
+    from server.config_loader import get_default_config
+    default_config = get_default_config()
+    if default_config is None:
+        return {"message": "No default config loaded. Use --default-config to specify a config file."}
+    return {"default_config": default_config}
+
 
 @app.api_route("/result/{folder_name}/final.png", methods=["GET", "HEAD"], tags=["api", "file"])
 async def get_result_by_folder(folder_name: str):
@@ -284,6 +294,11 @@ def prepare(args):
         nonce = os.getenv('MT_WEB_NONCE', generate_nonce())
     else:
         nonce = args.nonce
+    
+    # Load default config if specified
+    if getattr(args, 'default_config', None):
+        load_default_config(args.default_config)
+    
     if args.start_instance:
         return start_translator_client_proc(args.host, args.port + 1, nonce, args)
     folder_name= "upload-cache"

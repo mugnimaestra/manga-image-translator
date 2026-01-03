@@ -46,6 +46,7 @@ def parse_arguments():
     parser.add_argument('--models-ttl', default='0', type=int, help='models TTL in memory in seconds')
     parser.add_argument('--pre-dict', default=None, type=file_path, help='Path to the pre-translation dictionary file')
     parser.add_argument('--post-dict', default=None, type=file_path, help='Path to the post-translation dictionary file')    
+    parser.add_argument('--default-config', default=None, type=file_path, help='Path to a default config JSON file. Settings from this file will be used as defaults for all translation requests unless overridden by request-specific config.')
     g = parser.add_mutually_exclusive_group()
     g.add_argument('--use-gpu', action='store_true', help='Turn on/off gpu (auto switch between mps and cuda)')
     g.add_argument('--use-gpu-limited', action='store_true', help='Turn on/off gpu (excluding offline translator)')
