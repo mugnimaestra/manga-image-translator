@@ -22,7 +22,7 @@
   "render": {
     "renderer": "default",
     "alignment": "auto",
-    "direction": "auto",
+    "direction": "horizontal",
     "font_size_offset": 0
   },
   "upscale": {
