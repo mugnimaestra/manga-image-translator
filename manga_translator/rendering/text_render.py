@@ -648,10 +648,10 @@ def calc_horizontal(font_size: int, text: str, max_width: int, max_height: int, 
             except Exception:
                 new_syls = []
         if len(new_syls) == 0:
-            if len(word) <= 3:
-                new_syls = [word]
-            else:
-                new_syls = list(word)
+            # No hyphenator available for this language (e.g., Indonesian)
+            # Keep word as a whole unit instead of character-by-character split
+            # This prevents weird breaks like "Maka sih" instead of "Makasih"
+            new_syls = [word]
 
         # # Make sure no syllable goes over max_width
         # for syl in syllables[-1]:
