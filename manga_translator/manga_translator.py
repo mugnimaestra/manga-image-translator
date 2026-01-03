@@ -643,24 +643,29 @@ class MangaTranslator:
                 logger.debug(f"Exception details: {traceback.format_exc()}")
 
         # Web流式模式优化：保存final.png并使用占位符
-        if ctx.result and not self.result_sub_folder and hasattr(self, '_is_streaming_mode') and self._is_streaming_mode:
+        # IMPORTANT: Always save final.png and send final_ready in web mode
+        # The _is_streaming_mode flag can be lost during pickle serialization,
+        # so we save final.png whenever we're not in batch mode (result_sub_folder is empty)
+        if ctx.result and not self.result_sub_folder:
             # 保存final.png文件
             final_img = np.array(ctx.result)
             if len(final_img.shape) == 3:  # 彩色图片，转换BGR顺序
                 final_img = cv2.cvtColor(final_img, cv2.COLOR_RGB2BGR)
             cv2.imwrite(self._result_path('final.png'), final_img)
 
-            # 通知前端文件已就绪
+            # 通知前端文件已就绪 - Always send this so frontend knows where the result is
             if hasattr(self, '_progress_hooks') and self._current_image_context:
                 folder_name = self._current_image_context['subfolder']
                 await self._report_progress(f'final_ready:{folder_name}')
 
-            # 创建占位符结果并立即返回
-            from PIL import Image
-            placeholder = Image.new('RGB', (1, 1), color='white')
-            ctx.result = placeholder
-            ctx.use_placeholder = True
-            return ctx
+            # Only use placeholder optimization if explicitly enabled
+            if hasattr(self, '_is_streaming_mode') and self._is_streaming_mode:
+                # 创建占位符结果并立即返回
+                from PIL import Image
+                placeholder = Image.new('RGB', (1, 1), color='white')
+                ctx.result = placeholder
+                ctx.use_placeholder = True
+                return ctx
 
         return ctx
 
