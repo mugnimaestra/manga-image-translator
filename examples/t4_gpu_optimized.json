@@ -26,7 +26,7 @@
     "font_size_offset": 0
   },
   "upscale": {
-    "upscaler": "none",
+    "upscaler": "esrgan",
     "upscale_ratio": null,
     "revert_upscaling": false
   },
