@@ -20,6 +20,7 @@ LANGUAGE_ORIENTATION_PRESETS = {
     'FRA': 'h',
     'DEU': 'h',
     'HUN': 'h',
+    'IND': 'h',  # Indonesian - horizontal left-to-right
     'ITA': 'h',
     'JPN': 'auto',
     'KOR': 'h',
