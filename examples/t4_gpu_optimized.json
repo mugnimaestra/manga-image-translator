@@ -23,7 +23,8 @@
     "renderer": "default",
     "alignment": "auto",
     "direction": "horizontal",
-    "font_size_offset": 0
+    "font_size_offset": -2,
+    "no_hyphenation": true
   },
   "upscale": {
     "upscaler": "esrgan",
