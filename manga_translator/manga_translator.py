@@ -539,6 +539,11 @@ class MangaTranslator:
         else:
             logger.info("No pre-translation replacements made.")
             
+        # -- Export OCR text if requested
+        if config.save_text_data:
+            ocr_texts = [region.text for region in ctx.text_regions]
+            await self._report_progress('ocr_text:' + json.dumps(ocr_texts, ensure_ascii=False))
+
         # -- Translation
         await self._report_progress('translating')
         try:
@@ -1086,7 +1091,10 @@ class MangaTranslator:
 
         # 以下翻译处理仅在非none翻译器或有none翻译器但没有prep_manual时执行  
         # Translation processing below only happens for non-none translator or none translator without prep_manual  
-        if self.load_text:  
+        if config.load_text_data is not None and len(config.load_text_data) > 0:
+            translated_sentences = config.load_text_data
+            logger.info(f'Using {len(translated_sentences)} pre-loaded translations from config')
+        elif self.load_text:  
             input_filename = os.path.splitext(os.path.basename(self.input_files[0]))[0]  
             with open(self._result_path(f"{input_filename}_translations.txt"), "r") as f:  
                     translated_sentences = json.load(f)  

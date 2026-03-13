@@ -274,7 +274,58 @@
                 data-icon="carbon:chevron-down"
               ></i>
             </div>
+           </div>
+        </div>
+
+        <!-- Load Text (translations file) -->
+        <div class="flex flex-wrap items-center gap-2">
+          <div class="flex items-center gap-1" title="Load pre-translated text (JSON array)">
+            <i class="iconify text-gray-600" data-icon="carbon:document-import"></i>
+            <label
+              class="cursor-pointer bg-transparent border-b border-gray-300 px-2 py-1 text-sm text-gray-600 hover:border-blue-500 hover:text-blue-600 transition-colors"
+              for="textFile"
+            >
+              <span v-if="loadTextFile">{{ loadTextFile.name }}</span>
+              <span v-else>Load Text File</span>
+            </label>
+            <input
+              id="textFile"
+              type="file"
+              accept=".json,.txt"
+              class="hidden"
+              @change="onTextFileChange"
+            />
+            <button
+              v-if="loadTextFile"
+              class="text-red-500 hover:text-red-700 text-sm ml-1"
+              @click="clearTextFile"
+              title="Remove text file"
+            >
+              <i class="iconify" data-icon="carbon:close"></i>
+            </button>
           </div>
+          <span v-if="loadTextData" class="text-xs text-green-600">
+            {{ loadTextData.length }} translations loaded
+          </span>
+          <span v-if="loadTextFile &amp;&amp; !loadTextData" class="text-xs text-red-500">
+            Invalid file format
+          </span>
+        </div>
+
+        <!-- Export OCR Text -->
+        <div class="flex flex-wrap items-center gap-2">
+          <label class="flex items-center gap-1 text-sm text-gray-600 cursor-pointer" title="Export detected text as JSON for manual translation">
+            <input type="checkbox" v-model="saveTextData" @change="onSettingChange" class="accent-blue-600" />
+            Export OCR Text
+          </label>
+          <button
+            v-if="ocrTextData"
+            @click="downloadOcrText"
+            class="px-2 py-1 text-xs rounded-md text-white bg-green-600 hover:bg-green-700 flex items-center gap-1"
+          >
+            <i class="iconify" data-icon="carbon:download"></i>
+            Download ({{ ocrTextData.length }} regions)
+          </button>
         </div>
 
         <!-- メインコンテンツエリア -->
@@ -852,12 +903,56 @@
         customBoxThreshold: 0.7,
         maskDilationOffset: 30,
         inpainter: "lama_large",
+        loadTextFile: null,
+        loadTextData: null,
+        saveTextData: false,
+        ocrTextData: null,
 
         uploadController: null,
 
         // Settings change handlers for auto-saving
         onSettingChange() {
           this.saveSettings();
+        },
+
+        onTextFileChange(e) {
+          const file = e.target.files?.[0];
+          if (!file) return;
+          this.loadTextFile = file;
+          const reader = new FileReader();
+          reader.onload = (event) => {
+            try {
+              const parsed = JSON.parse(event.target.result);
+              if (Array.isArray(parsed) && parsed.every(item => typeof item === 'string')) {
+                this.loadTextData = parsed;
+              } else {
+                this.loadTextData = null;
+                console.warn('Text file must be a JSON array of strings');
+              }
+            } catch (err) {
+              this.loadTextData = null;
+              console.warn('Failed to parse text file as JSON:', err);
+            }
+          };
+          reader.readAsText(file);
+        },
+
+        clearTextFile() {
+          this.loadTextFile = null;
+          this.loadTextData = null;
+          const input = document.getElementById('textFile');
+          if (input) input.value = '';
+        },
+
+        downloadOcrText() {
+          if (!this.ocrTextData) return;
+          const blob = new Blob([JSON.stringify(this.ocrTextData, null, 2)], { type: 'application/json' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = 'ocr_text.json';
+          a.click();
+          URL.revokeObjectURL(url);
         },
 
         // Settings persistence
@@ -1202,6 +1297,7 @@
           // Reset translation state for new translation
           this.currentFolder = null;
           this.finalPngDisplayed = false;
+          this.ocrTextData = null;
           this.useFileResult = true;
           
           console.log("Started new translation, reset currentFolder to null");
@@ -1213,26 +1309,33 @@
           const formData = new FormData();
           formData.append("image", queuedImage.file);
 
-          const config = `{
-          "detector": {
-            "detector": "${this.textDetector}",
-            "detection_size": ${this.detectionResolution},
-            "box_threshold": ${this.customBoxThreshold},
-            "unclip_ratio": ${this.customUnclipRatio}
-          },
-          "render": {
-            "direction": "${this.renderTextDirection}"
-          },
-          "translator": {
-            "translator": "${this.translator}",
-            "target_lang": "${this.targetLanguage}"
-          },
-          "inpainter": {
-            "inpainter": "${this.inpainter}",
-            "inpainting_size": ${this.inpaintingSize}
-          },
-          "mask_dilation_offset": ${this.maskDilationOffset}
-        }`;
+          const configObj = {
+            detector: {
+              detector: this.textDetector,
+              detection_size: parseInt(this.detectionResolution),
+              box_threshold: parseFloat(this.customBoxThreshold),
+              unclip_ratio: parseFloat(this.customUnclipRatio)
+            },
+            render: {
+              direction: this.renderTextDirection
+            },
+            translator: {
+              translator: this.translator,
+              target_lang: this.targetLanguage
+            },
+            inpainter: {
+              inpainter: this.inpainter,
+              inpainting_size: parseInt(this.inpaintingSize)
+            },
+            mask_dilation_offset: parseInt(this.maskDilationOffset)
+          };
+          if (this.loadTextData && this.loadTextData.length > 0) {
+            configObj.load_text_data = this.loadTextData;
+          }
+          if (this.saveTextData) {
+            configObj.save_text_data = true;
+          }
+          const config = JSON.stringify(configObj);
 
           formData.append("config", config);
 
@@ -1293,6 +1396,13 @@
                     }
                     
                     this.showFinalResult();
+                  } else if (newStatus.startsWith("ocr_text:")) {
+                    try {
+                      this.ocrTextData = JSON.parse(newStatus.substring(9));
+                      console.log("OCR text received:", this.ocrTextData.length, "regions");
+                    } catch (e) {
+                      console.error("Failed to parse OCR text data:", e);
+                    }
                   } else if (processingItemIndex !== -1) {
                     // Update the processing item status and progress using Vue reactivity
                     console.log('Updating status for queued image:', queuedImage.id, 'to:', newStatus);

@@ -341,6 +341,10 @@ class Config(BaseModel):
     """Set the convolution kernel size of the text erasure area to completely clean up text residues"""
     mask_dilation_offset: int = 20
     """By how much to extend the text mask to remove left-over text pixels of the original image."""
+    load_text_data: Optional[list[str]] = None
+    """Pre-translated text data to use instead of running translation. JSON array of translated strings matching detected text regions."""
+    save_text_data: bool = False
+    """Emit detected OCR text via streaming progress for frontend download."""
     _filter_text = None
 
     @property
