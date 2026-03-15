@@ -1080,6 +1080,17 @@ class MangaTranslator:
         # 为none翻译器添加特殊处理  
         # Add special handling for none translator  
         if config.translator.translator == Translator.none:  
+            # 保存原始OCR文本（如果启用了save_text）
+            # Save raw OCR text if save_text is enabled
+            if self.save_text:
+                ocr_texts = [region.text for region in ctx.text_regions]
+                input_filename = os.path.splitext(os.path.basename(self.input_files[0]))[0]
+                filepath = self._result_path(f"{input_filename}_translations.txt")
+                with open(filepath, "w") as f:
+                    json.dump(ocr_texts, f, indent=4, ensure_ascii=False)
+                print(f"Raw OCR text saved to {filepath}. Exiting.")
+                exit(0)
+
             # 使用none翻译器时，为所有文本区域设置必要的属性  
             # When using none translator, set necessary properties for all text regions  
             for region in ctx.text_regions:  
