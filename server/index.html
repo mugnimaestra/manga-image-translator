@@ -37,6 +37,39 @@
           Image/Manga Translator
         </h1>
 
+        <!-- Mode Selector -->
+        <div class="flex justify-center">
+          <div class="inline-flex bg-gray-200 rounded-full p-1 gap-1">
+            <button
+              type="button"
+              @click="setMode('full')"
+              :class="mode === 'full' ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-600 hover:text-gray-800 hover:bg-gray-300'"
+              class="flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-medium transition-all"
+            >
+              <i class="iconify" data-icon="carbon:translate"></i>
+              Full Translation
+            </button>
+            <button
+              type="button"
+              @click="setMode('ocr')"
+              :class="mode === 'ocr' ? 'bg-amber-600 text-white shadow-sm' : 'text-gray-600 hover:text-gray-800 hover:bg-gray-300'"
+              class="flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-medium transition-all"
+            >
+              <i class="iconify" data-icon="carbon:document-export"></i>
+              OCR Export
+            </button>
+            <button
+              type="button"
+              @click="setMode('render')"
+              :class="mode === 'render' ? 'bg-purple-600 text-white shadow-sm' : 'text-gray-600 hover:text-gray-800 hover:bg-gray-300'"
+              class="flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-medium transition-all"
+            >
+              <i class="iconify" data-icon="carbon:document-import"></i>
+              Load + Render
+            </button>
+          </div>
+        </div>
+
         <!-- 上部の設定オプション（1段目） -->
         <div class="flex flex-wrap items-end gap-4">
           <!-- Detection Resolution -->
@@ -87,7 +120,7 @@
           </div>
 
           <!-- Render text direction -->
-          <div class="flex items-center gap-1" title="Render text orientation">
+          <div v-show="mode !== 'ocr'" class="flex items-center gap-1" title="Render text orientation">
             <i
               class="iconify text-gray-600"
               data-icon="carbon:text-align-left"
@@ -110,7 +143,7 @@
           </div>
 
           <!-- Translator -->
-          <div class="flex items-center gap-1" title="Translator">
+          <div v-show="mode === 'full'" class="flex items-center gap-1" title="Translator">
             <i
               class="iconify text-gray-600"
               data-icon="carbon:operations-record"
@@ -133,7 +166,7 @@
           </div>
 
           <!-- Target Language -->
-          <div class="flex items-center gap-1" title="Target language">
+          <div v-show="mode === 'full'" class="flex items-center gap-1" title="Target language">
             <i class="iconify text-gray-600" data-icon="carbon:language"></i>
             <div class="relative">
               <select  
@@ -179,7 +212,7 @@
         <!-- オプション（2段目） -->
         <div class="flex flex-wrap items-end gap-4">
           <!-- Inpainting Size -->
-          <div class="flex items-center gap-1" title="Inpainting Size">
+          <div v-show="mode !== 'ocr'" class="flex items-center gap-1" title="Inpainting Size">
             <i class="iconify text-gray-600" data-icon="carbon:paint-brush"></i>
             <div class="relative">
               <select
@@ -236,7 +269,7 @@
           </div>
 
           <!-- Mask Dilation Offset -->
-          <div class="flex items-center gap-1" title="Mask Dilation Offset">
+          <div v-show="mode !== 'ocr'" class="flex items-center gap-1" title="Mask Dilation Offset">
             <i
               class="iconify text-gray-600"
               data-icon="material-symbols:adjust-outline"
@@ -254,7 +287,7 @@
           </div>
 
           <!-- Inpainter -->
-          <div class="flex items-center gap-1" title="Inpainter">
+          <div v-show="mode !== 'ocr'" class="flex items-center gap-1" title="Inpainter">
             <i class="iconify text-gray-600" data-icon="carbon:paint-brush"></i>
             <div class="relative">
               <select
@@ -278,7 +311,7 @@
         </div>
 
         <!-- Load Text (translations file) -->
-        <div class="flex flex-wrap items-center gap-2">
+        <div v-show="mode !== 'ocr'" class="flex flex-wrap items-center gap-2">
           <div class="flex items-center gap-1" title="Load pre-translated text (JSON array)">
             <i class="iconify text-gray-600" data-icon="carbon:document-import"></i>
             <label
@@ -313,7 +346,7 @@
         </div>
 
         <!-- Export OCR Text -->
-        <div class="flex flex-wrap items-center gap-2">
+        <div v-show="mode === 'full'" class="flex flex-wrap items-center gap-2">
           <label class="flex items-center gap-1 text-sm text-gray-600 cursor-pointer" title="Export detected text as JSON for manual translation">
             <input type="checkbox" v-model="saveTextData" @change="onSettingChange" class="accent-blue-600" />
             Export OCR Text
@@ -326,6 +359,42 @@
             <i class="iconify" data-icon="carbon:download"></i>
             Download ({{ ocrTextData.length }} regions)
           </button>
+        </div>
+
+        <!-- OCR Export Results (prominent in OCR mode) -->
+        <div v-if="ocrTextData && mode === 'ocr'" class="bg-amber-50 border border-amber-200 rounded-lg p-4 space-y-3">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <i class="iconify text-amber-600 text-xl" data-icon="carbon:document-export"></i>
+              <span class="font-medium text-amber-800">OCR Text Extracted</span>
+              <span class="text-sm text-amber-600">({{ ocrTextData.length }} regions)</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <button
+                @click="copyOcrText"
+                class="px-3 py-1 text-sm rounded-md text-amber-700 bg-amber-100 hover:bg-amber-200 flex items-center gap-1 transition-colors"
+              >
+                <i class="iconify" data-icon="carbon:copy"></i>
+                Copy
+              </button>
+              <button
+                @click="downloadOcrText"
+                class="px-3 py-1 text-sm rounded-md text-white bg-amber-600 hover:bg-amber-700 flex items-center gap-1 transition-colors"
+              >
+                <i class="iconify" data-icon="carbon:download"></i>
+                Download JSON
+              </button>
+            </div>
+          </div>
+          <!-- Text preview (first 5 items) -->
+          <div v-if="ocrTextData.length > 0" class="bg-white rounded border border-amber-100 p-2 max-h-32 overflow-y-auto">
+            <div v-for="(text, idx) in ocrTextData.slice(0, 5)" :key="idx" class="text-sm text-gray-700 py-0.5 border-b border-gray-100 last:border-0">
+              <span class="text-amber-500 font-mono text-xs mr-1">{{ idx + 1 }}.</span> {{ text }}
+            </div>
+            <div v-if="ocrTextData.length > 5" class="text-xs text-gray-400 mt-1">
+              ... and {{ ocrTextData.length - 5 }} more regions
+            </div>
+          </div>
         </div>
 
         <!-- メインコンテンツエリア -->
@@ -409,10 +478,10 @@
                 <button
                   type="button"
                   @click="startTranslation"
-                  class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-blue-500 border border-green-500"
-                  style="color: white !important; background-color: #059669 !important;"
+                  :class="mode === 'ocr' ? 'px-4 py-2 text-white rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500 border border-amber-500 bg-amber-600 hover:bg-amber-700' : mode === 'render' ? 'px-4 py-2 text-white rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 border border-purple-500 bg-purple-600 hover:bg-purple-700' : 'px-4 py-2 text-white rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 border border-green-500 bg-green-600 hover:bg-green-700'"
+                  :style="mode === 'ocr' ? 'color: white !important; background-color: #D97706 !important;' : mode === 'render' ? 'color: white !important; background-color: #7C3AED !important;' : 'color: white !important; background-color: #059669 !important;'"
                 >
-                  Start Translating
+                  {{ mode === 'ocr' ? 'Extract Text' : mode === 'render' ? 'Render with Translations' : 'Start Translating' }}
                 </button>
               </div>
               <div class="text-sm text-gray-500">
@@ -836,33 +905,7 @@
         },
         isDragging: false,
         
-        // Step tracking for progress
-        translationSteps: [
-          'upload',
-          'pending', 
-          'detection',
-          'ocr',
-          'mask-generation',
-          'inpainting',
-          'upscaling',
-          'translating',
-          'rendering',
-          'finished'
-        ],
-        
-        // Map actual server status to step numbers for better progress tracking
-        statusToStep: {
-          'upload': 1,
-          'pending': 2,
-          'detection': 3,
-          'ocr': 4,
-          'mask-generation': 5,
-          'inpainting': 6,
-          'upscaling': 7,
-          'translating': 8,
-          'rendering': 9,
-          'finished': 10
-        },
+        // Step tracking: See getStepProgress() for per-mode step maps
         detectionResolution: "1536",
         textDetector: "default",
         renderTextDirection: "auto",
@@ -907,6 +950,16 @@
         loadTextData: null,
         saveTextData: false,
         ocrTextData: null,
+
+        // === 3-Mode Selector State ===
+        // 'full' = Full Translation, 'ocr' = OCR Export Only, 'render' = Load Text + Render
+        mode: 'full',
+
+        // Stash properties to preserve user's Full Translation preferences when switching modes
+        _savedTranslator: null,
+        _savedInpainter: null,
+        _savedTargetLanguage: null,
+        _savedSaveTextData: null,
 
         uploadController: null,
 
@@ -955,6 +1008,48 @@
           URL.revokeObjectURL(url);
         },
 
+        copyOcrText() {
+          if (!this.ocrTextData) return;
+          const text = JSON.stringify(this.ocrTextData, null, 2);
+          navigator.clipboard.writeText(text).then(() => {
+            console.log('OCR text copied to clipboard');
+          }).catch(err => {
+            console.error('Failed to copy:', err);
+          });
+        },
+
+        // === Mode Switching ===
+        setMode(newMode) {
+          if (newMode === this.mode) return;
+
+          // Stash current settings when leaving 'full' mode
+          if (this.mode === 'full') {
+            this._savedTranslator = this.translator;
+            this._savedInpainter = this.inpainter;
+            this._savedTargetLanguage = this.targetLanguage;
+            this._savedSaveTextData = this.saveTextData;
+          }
+
+          this.mode = newMode;
+
+          // Apply mode-specific auto-configuration
+          if (newMode === 'ocr') {
+            this.translator = 'none';
+            this.inpainter = 'none';
+            this.saveTextData = true;
+          } else if (newMode === 'render') {
+            this.translator = 'none';
+          } else if (newMode === 'full') {
+            // Restore stashed values
+            if (this._savedTranslator) this.translator = this._savedTranslator;
+            if (this._savedInpainter) this.inpainter = this._savedInpainter;
+            if (this._savedTargetLanguage) this.targetLanguage = this._savedTargetLanguage;
+            if (this._savedSaveTextData !== null) this.saveTextData = this._savedSaveTextData;
+          }
+
+          this.saveSettings();
+        },
+
         // Settings persistence
         loadSettings() {
           try {
@@ -971,6 +1066,16 @@
               if (settings.customBoxThreshold) this.customBoxThreshold = settings.customBoxThreshold;
               if (settings.maskDilationOffset) this.maskDilationOffset = settings.maskDilationOffset;
               if (settings.inpainter) this.inpainter = settings.inpainter;
+              if (settings.mode) this.mode = settings.mode;
+
+              // Apply auto-config for non-full modes (without stashing, since we're restoring)
+              if (this.mode === 'ocr') {
+                this.translator = 'none';
+                this.inpainter = 'none';
+                this.saveTextData = true;
+              } else if (this.mode === 'render') {
+                this.translator = 'none';
+              }
             }
           } catch (error) {
             console.warn('Failed to load settings:', error);
@@ -990,6 +1095,7 @@
               customBoxThreshold: this.customBoxThreshold,
               maskDilationOffset: this.maskDilationOffset,
               inpainter: this.inpainter,
+              mode: this.mode,
             };
             localStorage.setItem('manga-translator-settings', JSON.stringify(settings));
           } catch (error) {
@@ -1079,7 +1185,8 @@
               id: Date.now() + Math.random() + index,
               file: file,
               addedAt: new Date(),
-              status: 'queued'
+              status: 'queued',
+              mode: this.mode
             };
             this.queuedImages.push(queuedImage);
           });
@@ -1265,7 +1372,8 @@
               id: Date.now() + Math.random(),
               file: currentFile,
               addedAt: new Date(),
-              status: 'queued'  // Explicitly set as queued
+              status: 'queued',  // Explicitly set as queued
+              mode: this.mode
             };
             this.queuedImages.push(queuedImage);
             this.file = null; // Clear current file
@@ -1276,7 +1384,8 @@
               id: Date.now() + Math.random(),
               file: currentFile,
               addedAt: new Date(),
-              status: 'processing'  // This one will be processing
+              status: 'processing',  // This one will be processing
+              mode: this.mode
             };
             this.queuedImages.push(queuedImage);
             this.file = null; // Clear current file
@@ -1301,6 +1410,20 @@
           this.useFileResult = true;
           
           console.log("Started new translation, reset currentFolder to null");
+
+          // Validate render mode requires loaded text
+          if (queuedImage.mode === 'render' && (!this.loadTextData || this.loadTextData.length === 0)) {
+            const processingItemIndex = this.queuedImages.findIndex(item => item.id === queuedImage.id);
+            if (processingItemIndex !== -1) {
+              this.queuedImages[processingItemIndex] = {
+                ...this.queuedImages[processingItemIndex],
+                status: 'error',
+                error: 'Load + Render mode requires a text file. Please load translations first.'
+              };
+            }
+            this.processNextInQueue();
+            return;
+          }
 
           // Status is already set correctly in startTranslation, no need to change it here
 
@@ -1825,47 +1948,41 @@
 
     // Calculate step progress for a queued image
     getStepProgress(queuedImage) {
-      console.log('Calculating progress for status:', queuedImage.status);
-      
       if (!queuedImage.status || queuedImage.status === 'queued') {
         return { percentage: 0 };
       }
       
-      // Map status to step number for progress calculation
-      const stepMap = {
-        'upload': 1,
-        'pending': 2,
-        'detection': 3,
-        'ocr': 4,
-        'mask-generation': 5,
-        'inpainting': 6,
-        'upscaling': 7,
-        'translating': 8,
-        'rendering': 9,
-        'finished': 10
+      // Per-mode step maps
+      const stepMaps = {
+        full: {
+          'upload': 1, 'pending': 2, 'detection': 3, 'ocr': 4,
+          'mask-generation': 5, 'inpainting': 6, 'upscaling': 7,
+          'translating': 8, 'rendering': 9, 'finished': 10
+        },
+        ocr: {
+          'upload': 1, 'pending': 2, 'detection': 3, 'ocr': 4, 'finished': 5
+        },
+        render: {
+          'upload': 1, 'pending': 2, 'detection': 3, 'ocr': 4,
+          'mask-generation': 5, 'inpainting': 6, 'upscaling': 7,
+          'rendering': 8, 'finished': 9
+        }
       };
       
+      const mode = queuedImage.mode || 'full';
+      const stepMap = stepMaps[mode] || stepMaps.full;
+      const totalSteps = Object.keys(stepMap).length;
+      
       const currentStep = stepMap[queuedImage.status];
-      console.log('Status maps to step:', currentStep);
       
       if (currentStep === undefined) {
-        // If status is not in our map, estimate based on known steps
-        if (queuedImage.status === 'error') {
-          return { percentage: 0 };
-        }
-        if (queuedImage.status === 'processing') {
-          // For 'processing' status, show 0% until we get actual step updates
-          return { percentage: 0 };
-        }
-        // For unknown status, assume it's in the middle
+        if (queuedImage.status === 'error') return { percentage: 0 };
+        if (queuedImage.status === 'processing') return { percentage: 0 };
         return { percentage: 50 };
       }
       
-      const totalSteps = 10;
       const percentage = Math.round(((currentStep - 1) / (totalSteps - 1)) * 100);
-      
-      console.log('Progress result:', { percentage });
-      return { percentage: percentage };
+      return { percentage };
     },
 
     // Get user-friendly step name
